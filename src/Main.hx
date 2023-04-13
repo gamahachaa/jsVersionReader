@@ -1,9 +1,11 @@
 package;
 
+import haxe.Json;
 import php.Lib;
 import php.Web;
 import sys.FileSystem;
 import sys.io.File;
+import version.Params;
 
 /**
  * Simple script to retrun the lateste version of the no intenet js script
@@ -15,6 +17,10 @@ class Main
 	var _parentLevel:Int;
 	var dir:String;
 	var params:haxe.ds.Map<String, String>;
+	var script:String;
+	var rootPath;
+	var debug:Bool;
+	var appDir;
 
 	static function main()
 	{
@@ -25,40 +31,52 @@ class Main
 		_parentLevel = parentLevel;
 		params = Web.getParams();
 		dir = Web.getCwd();
-		listMatchingFiles();
-	}
-	function listMatchingFiles()
-	{
-		var script = "";
 		var dirPathTab = dir.split("/");
-		var rootPath = dirPathTab.slice(0, dirPathTab.length -3);
-		var debug:Bool = params.exists("debug")? params.get("debug")=="true": false;
-		//Lib.print(debug);
-		/*if (params.exists("parentlevel"))
-		{
-			_parentLevel = Std.parseInt(params.get("parentlevel"));
-		}*/
+        script = "";
+		debug = params.exists(DEBUG)? params.get(Params.DEBUG)=="true": false;
 
-		//Lib.print(dirPathTab);
-		//dirPathTab.splice( dirPathTab.length - 1 - _parentLevel, _parentLevel);
-		//Lib.print(dirPathTab);
-
-		//var last = dirPathTab[dirPathTab.length - _parentLevel];
-		if (params.exists("scriptfile"))
+		if (params.exists(Params.SCRIPT_FILE))
 		{
-			script = params.get("scriptfile");
+			rootPath = dirPathTab.slice(0, dirPathTab.length -3);
+			script = params.get(Params.SCRIPT_FILE);
 			rootPath.push(script);
+			appDir = rootPath.join("/");
+			if (!params.exists(Params.ASSETS_VERSION)){
+				// legacy version tracker
+				Lib.print(listMatchingFiles());
+			}else{
+				var scriptVersion = listMatchingFiles();
+				var assetsVersion = getCurrentAssetVersion();
+				Lib.print(
+					Json.stringify({
+						scriptVersion : scriptVersion,
+						assetsVersion : assetsVersion
+					}));
+			}
 		}
 		else
 		{
 			Lib.print("scriptfile is unknown");
-			return;
+			
 		}
-
-		//Lib.print("Main::listMatchingFiles::last", last );
+		return;
+	}
+	
+	function getCurrentAssetVersion() 
+	{
+		var configPath = appDir + "/assets/data/dev_config.json";
+		if (FileSystem.exists(configPath))
+		{
+			 var configFile:Dynamic = Json.parse( File.getContent(configPath) );
+			 return configFile.assetsVersion;
+		}
+		else return "-1";
+	}
+	function listMatchingFiles()
+	{
 		var reg:EReg = new EReg('^${script}_(\\d{8}_\\d{6})(.min)?.js$', "i");
 		var regTest:EReg = new EReg('^(${script})(.min)?.js$', "i");
-		var appDir = rootPath.join("/");
+		
 
 		if (FileSystem.exists(appDir))
 		{
@@ -72,9 +90,7 @@ class Main
 				{
 					if (regTest.match(i))
 					{
-						Lib.print("0");
-						//Lib.print("matched debug");
-						return;
+						return "0";
 					}
 				}
 			}
@@ -84,21 +100,17 @@ class Main
 				{
 					if (reg.match(i))
 					{
-						Lib.print(reg.matched(1));
-						//Lib.print("matched min");
-						return;
+						return reg.matched(1);
 					}
 				}
 			}
 		}
 		else
 		{
-			Lib.print(appDir + " not exists");
+			return appDir + " not exists";
 		}
-
-		Lib.print("-1");
-
-		return;
+		// if app directory exists but no file found that matches the regex
+		return "-1";
 	}
 
 }
