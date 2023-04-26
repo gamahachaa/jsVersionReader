@@ -18,9 +18,9 @@ class Main
 	var dir:String;
 	var params:haxe.ds.Map<String, String>;
 	var script:String;
-	var rootPath;
+	var rootPath:Array<String>;
 	var debug:Bool;
-	var appDir;
+	var appDir:String;
 
 	static function main()
 	{
@@ -33,7 +33,7 @@ class Main
 		dir = Web.getCwd();
 		var dirPathTab = dir.split("/");
         script = "";
-		debug = params.exists(DEBUG)? params.get(Params.DEBUG)=="true": false;
+		debug = params.exists(Params.DEBUG)? params.get(Params.DEBUG)=="true": false;
 
 		if (params.exists(Params.SCRIPT_FILE))
 		{
